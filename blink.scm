@@ -9,23 +9,24 @@
     (with-output-to-string (lambda ()
         (for-each (lambda (byte) (write-char (integer->char byte))) buf))))
 
+  (define request-type (bitwise-ior usb::request-type-class
+                                    usb::recipient-device
+                                    usb::endpoint-out))
+  (define request #x09)
+  (define timeout 5000)
+  (define index 0)
+
   (define (blink-write handle buf)
-    (let ((request-type (bitwise-ior usb::request-type-class
-                                     usb::recipient-device
-                                     usb::endpoint-out))
-          (request #x09)
-          (value (bitwise-ior (arithmetic-shift 3 8)
+    (let ((value (bitwise-ior (arithmetic-shift 3 8)
                               (bitwise-and (car buf) #xFF)))
-          (index 0)
-          (bytes (pack buf))
-          (m 5000))
+          (bytes (pack buf)))
       (usb-control-transfer handle
-                       request-type
-                       request
-                       value
-                       index
-                       bytes
-                       m)))
+                            request-type
+                            request
+                            value
+                            index
+                            bytes
+                            timeout)))
 
   (define (blink-color! dev r g b)
     (blink-write dev (list 1 #x6e r g b 0 0 0 0)))
