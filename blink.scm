@@ -76,7 +76,9 @@
            (tl (bitwise-and dms #xFF)))
       (blink-write dev (list 1 #x63 r g b th tl 0 0))))
 
-  ; Write a pattern line to the blink(1)
+  ; Write a pattern line to the blink(1).  There are only 12 slots, and they
+  ; are 0 indexed.  Specifying a position over 11 will always set the value
+  ; on position 0.
   (define (blink-write-pattern-line! dev ms r g b pos)
     (let* ((dms (/ ms 10))
            (th (>> dms 8))
@@ -138,14 +140,14 @@
 (define handle (blink-open dev))
 (test-assert handle)
 
-(blink-off! handle)
-(sleep 1)
+; (blink-off! handle)
+; (sleep 1)
 
-(test 10 (blink-version handle))
-(blink-write-pattern-line! handle 100 255 0 0 0)
-(test (list 100 255 0 0) (blink-read-pattern-line handle 0))
-(blink-write-pattern-line! handle 100 0 255 0 0)
-(test (list 100 0 255 0) (blink-read-pattern-line handle 0))
+; (test 10 (blink-version handle))
+; (blink-write-pattern-line! handle 100 255 0 0 0)
+; (test (list 100 255 0 0) (blink-read-pattern-line handle 0))
+; (blink-write-pattern-line! handle 100 0 255 0 0)
+; (test (list 100 0 255 0) (blink-read-pattern-line handle 0))
 
 ; (map (lambda (color)
 ;        (let ((r (car color)) (g (cadr color)) (b (caddr color)))
@@ -180,4 +182,33 @@
 ; (blink-play! handle)
 
 (test-end)
+
+(define (times proc t)
+  (let loop ((i 0))
+    (if (not (= t i))
+      (begin
+        (proc i)
+        (loop (+ i 1))))))
+
+(define (readlines t)
+  (times (lambda (i)
+           (printf "~S ~S ~N"
+                   i
+                   (blink-read-pattern-line handle i))) t))
+
+(define (doit t)
+  (times (lambda (i) (blink-write-pattern-line! handle 0 0 0 0 i)) t))
+
+(doit 12)
+
+; (blink-write-pattern-line! handle 1000 255 0 0 0)
+; (blink-write-pattern-line! handle 1000 0 255 0 11)
+; (print (blink-read-pattern-line handle 0))
+; (blink-play! handle)
+
+(blink-write-pattern-line! handle 100 0 0 0 0)
+(blink-write-pattern-line! handle 100 0 0 0 1)
+(blink-write-pattern-line! handle 100 0 255 0 11)
+(readlines 12)
+
 (test-exit)
