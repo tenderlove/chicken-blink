@@ -6,7 +6,8 @@
    blink-off!
    blink-write-pattern-line!
    blink-play!
-   blink-version)
+   blink-version
+   blink-read-pattern-line)
   (import scheme chicken ports usb srfi-1 srfi-69 srfi-18 posix)
   (use usb srfi-1 srfi-69 srfi-18)
 
@@ -82,6 +83,19 @@
            (tl (bitwise-and dms #xFF)))
       (blink-write dev (list 1 #x50 r g b th tl pos 0))))
 
+  ; Read a pattern line
+  (define (blink-read-pattern-line dev pos)
+    (let ((packet (list 1 #x52 0 0 0 0 0 pos 0)))
+      (blink-write dev packet)
+      (let* ((buf (blink-read dev packet))
+             (chars (map char->integer (string->list buf)))
+             (r (list-ref chars 2))
+             (g (list-ref chars 3))
+             (b (list-ref chars 4))
+             (ms (* 10 (+ (<< (list-ref chars 5) 8)
+                       (bitwise-and #xFF (list-ref chars 6))))))
+        (list ms r g b))))
+
   ; Play the pattern
   (define (blink-play! dev #!optional (pos 0) (play 1))
     (blink-write dev (list 1 #x70 play pos 0 0 0 0)))
@@ -128,6 +142,10 @@
 (sleep 1)
 
 (test 10 (blink-version handle))
+(blink-write-pattern-line! handle 100 255 0 0 0)
+(test (list 100 255 0 0) (blink-read-pattern-line handle 0))
+(blink-write-pattern-line! handle 100 0 255 0 0)
+(test (list 100 0 255 0) (blink-read-pattern-line handle 0))
 
 ; (map (lambda (color)
 ;        (let ((r (car color)) (g (cadr color)) (b (caddr color)))
