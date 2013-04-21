@@ -4,10 +4,13 @@
    blink-set!
    blink-fade!
    blink-off!
+   blink-on!
    blink-write-pattern-line!
    blink-play!
    blink-version
-   blink-read-pattern-line)
+   blink-read-pattern-line
+   blink-read-pattern-lines
+   blink-serverdown!)
   (import scheme chicken ports usb srfi-1 srfi-69 srfi-18 posix)
   (use usb srfi-1 srfi-69 srfi-18)
 
@@ -66,8 +69,20 @@
   (define (blink-set! dev r g b)
     (blink-write dev (list 1 #x6e r g b 0 0 0 0)))
 
-  ; Turn the light off
-  (define (blink-off! dev) (blink-set! dev 0 0 0))
+  ; Turn the device off
+  (define (blink-off! dev) (blink-serverdown! dev #f 0))
+
+  ; Turn the device on
+  (define (blink-on! dev #!optional (ms 10))
+    (blink-serverdown! dev #t ms))
+
+  ; Turn the server on or off.  
+  (define (blink-serverdown! dev on ms)
+    (let* ((dms (/ ms 10))
+           (th (>> dms 8))
+           (tl (bitwise-and dms #xFF))
+           (onv (if on 1 0)))
+      (blink-write dev (list 1 #x44 onv th tl 0 0 0 0))))
 
   ; Fade to r g b in ms milliseconds
   (define (blink-fade! dev ms r g b)
@@ -97,6 +112,13 @@
              (ms (* 10 (+ (<< (list-ref chars 5) 8)
                        (bitwise-and #xFF (list-ref chars 6))))))
         (list ms r g b))))
+
+  ; Read all the pattern lines
+  (define (blink-read-pattern-lines dev)
+    (let loop ((i 11) (acc '()))
+      (if (< i 0)
+          acc
+          (loop (- i 1) (cons (blink-read-pattern-line dev i) acc)))))
 
   ; Play the pattern
   (define (blink-play! dev #!optional (pos 0) (play 1))
@@ -190,25 +212,22 @@
         (proc i)
         (loop (+ i 1))))))
 
-(define (readlines t)
-  (times (lambda (i)
-           (printf "~S ~S ~N"
-                   i
-                   (blink-read-pattern-line handle i))) t))
-
 (define (doit t)
   (times (lambda (i) (blink-write-pattern-line! handle 0 0 0 0 i)) t))
 
-(doit 12)
+; (doit 12)
 
 ; (blink-write-pattern-line! handle 1000 255 0 0 0)
 ; (blink-write-pattern-line! handle 1000 0 255 0 11)
 ; (print (blink-read-pattern-line handle 0))
 ; (blink-play! handle)
 
-(blink-write-pattern-line! handle 100 0 0 0 0)
-(blink-write-pattern-line! handle 100 0 0 0 1)
-(blink-write-pattern-line! handle 100 0 255 0 11)
-(readlines 12)
+; (blink-write-pattern-line! handle 100 0 0 0 0)
+; (blink-write-pattern-line! handle 100 0 0 0 1)
+; (blink-write-pattern-line! handle 100 0 255 0 11)
+; (print (blink-read-pattern-lines handle))
+
+; (blink-on! handle)
+; (blink-set! handle 255 0 0)
 
 (test-exit)
