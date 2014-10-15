@@ -1,6 +1,7 @@
 (module blink
   (blink-devices
    blink-open
+   blink-close
    blink-set!
    blink-fade!
    blink-off!
@@ -10,7 +11,8 @@
    blink-version
    blink-read-pattern-line
    blink-read-pattern-lines
-   blink-serverdown!)
+   blink-serverdown!
+   with-first-blink)
   (import scheme chicken ports usb srfi-1 srfi-69 srfi-18 posix)
   (use usb srfi-1 srfi-69 srfi-18)
 
@@ -64,6 +66,14 @@
                             bytes
                             timeout)
       bytes))
+
+  ; Find the first blink device, open it, and call the callback with the
+  ; opened device.
+  (define (with-first-blink cb)
+    (let* ((dev (car (blink-devices)))
+           (handle (blink-open dev)))
+      (cb handle)
+      (blink-close handle)))
 
   ; set the color to r g b on dev.  r g b should be values from 0 to 255
   (define (blink-set! dev r g b)
@@ -147,87 +157,11 @@
   ; Open the device for writing.  Returns a handle for the blink(1)
   ; that you can manipulate.
   (define (blink-open dev)
-    (let ((dev (usb-open dev)))
-      (usb-claim-interface! dev) dev))
+    (let ((handle (usb-open dev)))
+      (usb-claim-interface! handle) handle))
+
+  ; Close the device.
+  (define (blink-close dev)
+    (usb-release-interface! dev)
+    (usb-close dev))
 )
-
-(import blink)
-(use test posix)
-
-(test-begin "blink")
-
-(define dev (car (blink-devices)))
-(test-assert dev)
-
-(define handle (blink-open dev))
-(test-assert handle)
-
-; (blink-off! handle)
-; (sleep 1)
-
-; (test 10 (blink-version handle))
-; (blink-write-pattern-line! handle 100 255 0 0 0)
-; (test (list 100 255 0 0) (blink-read-pattern-line handle 0))
-; (blink-write-pattern-line! handle 100 0 255 0 0)
-; (test (list 100 0 255 0) (blink-read-pattern-line handle 0))
-
-; (map (lambda (color)
-;        (let ((r (car color)) (g (cadr color)) (b (caddr color)))
-;          (blink-set! handle r g b)
-;          (sleep 1)))
-;      '((255 0 0) (0 255 0) (0 0 255)))
-; 
-; (blink-off! handle)
-; (sleep 1)
-
-; (map (lambda (color)
-;        (let ((r (car color)) (g (cadr color)) (b (caddr color)))
-;          (blink-fade! handle 500 r g b)
-;          (sleep 1)))
-;      '((255 0 0) (0 255 0) (0 0 255)))
-; 
-; (blink-off! handle)
-; (sleep 1)
-; 
-; (define (playit handle index)
-;   (if (= 100 index)
-;     (blink-play! handle)
-;     (begin
-;       (blink-write-pattern-line! handle 100 0 255 0 index)
-;       (playit handle (+ index 1)))))
-; 
-; (playit handle 0)
-
-; (blink-write-pattern-line! handle 100 255 0 0 0)
-; (blink-write-pattern-line! handle 100 0 255 0 1)
-; (blink-write-pattern-line! handle 100 0 0 255 2)
-; (blink-play! handle)
-
-(test-end)
-
-(define (times proc t)
-  (let loop ((i 0))
-    (if (not (= t i))
-      (begin
-        (proc i)
-        (loop (+ i 1))))))
-
-(define (doit t)
-  (times (lambda (i) (blink-write-pattern-line! handle 0 0 0 0 i)) t))
-
-; (doit 12)
-
-; (blink-write-pattern-line! handle 1000 255 0 0 0)
-; (blink-write-pattern-line! handle 1000 0 255 0 11)
-; (print (blink-read-pattern-line handle 0))
-; (blink-play! handle)
-
-; (blink-write-pattern-line! handle 100 0 0 0 0)
-; (blink-write-pattern-line! handle 100 0 0 0 1)
-; (blink-write-pattern-line! handle 100 0 255 0 11)
-; (print (blink-read-pattern-lines handle))
-
-; (blink-on! handle)
-; (blink-set! handle 255 0 0)
-
-(test-exit)

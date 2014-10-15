@@ -1,0 +1,10 @@
+(use srfi-1)
+(use srfi-13)
+
+(compile -O2 -d0 -s -j blink "blink.scm")
+(compile -O2 -d0 -s blink.import.scm))
+
+(install-extension
+  'blink
+  '("blink.so" "blink.import.so")
+  '((version "1.0.0")))

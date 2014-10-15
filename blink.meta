@@ -1,0 +1,10 @@
+;;; blink.meta -*- Hen -*-
+
+((synopsis "blink(1) client library")
+ (author "Aaron Patterson")
+ (license "MIT")
+ (category fun)
+ (needs usb)
+ (test-depends test)
+ (files "blink.scm" "blink.release-info" "blink.meta" "blink.setup" "tests/run.scm"))
+
