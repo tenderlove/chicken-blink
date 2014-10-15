@@ -13,8 +13,8 @@
    blink-read-pattern-lines
    blink-serverdown!
    with-first-blink)
-  (import scheme chicken ports usb srfi-1 srfi-69 srfi-18 posix)
-  (use usb srfi-1 srfi-69 srfi-18)
+  (import scheme chicken ports usb srfi-1 posix)
+  (use usb srfi-1)
 
   (define << arithmetic-shift)
   (define (>> n count) (arithmetic-shift n (- count)))
